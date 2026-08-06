@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import SideBar from "@/components/SideBar";
+import {SideBar} from "@/components/SideBar";
 import Footer from "@/components/Footer";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
