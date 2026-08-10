@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import GerenciadorTarefas from '@/components/GerenciadorTarefas';
 
 function PainelProfessorContent() {
   const searchParams = useSearchParams();
@@ -88,7 +89,7 @@ function PainelProfessorContent() {
 
         <button
           onClick={handleLogout}
-          className="self-start sm:self-auto px-3 py-1.5 text-xs text-amber-500 dark:text-red-400 border border-red-200 dark:border-red-900/30 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+          className="self-start sm:self-auto px-3 py-1.5 text-xs text-amber-500 dark:text-red-400 border border-zinc-200 dark:border-red-900/30 rounded-md hover:bg-zinc-100 dark:hover:bg-red-950/20 transition-colors"
         >
           Sair da Sessão
         </button>
@@ -118,7 +119,9 @@ function PainelProfessorContent() {
             Ver Entregas
           </button>
         </div>
+
       </div>
+      <GerenciadorTarefas />
     </div>
   );
 }
