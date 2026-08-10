@@ -46,7 +46,7 @@ function PainelProfessorContent() {
             Área Restrita do Professor
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 text-center">
-            Insira sua chave de acesso ou utilize a URL com parâmetro ?key=
+            Insira sua chave de acesso
           </p>
 
           <form onSubmit={handleManualLogin} className="space-y-4">
@@ -58,14 +58,13 @@ function PainelProfessorContent() {
                 type="password"
                 value={inputKey}
                 onChange={(e) => setInputKey(e.target.value)}
-                placeholder="Ex: SuaChaveSuperSegura"
                 className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                 required
               />
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors"
+              className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-white font-medium text-sm rounded-lg transition-colors"
             >
               Autenticar
             </button>
@@ -79,7 +78,7 @@ function PainelProfessorContent() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-zinc-100 dark:text-white">
             Painel de Gestão - Plutão Física
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -89,7 +88,7 @@ function PainelProfessorContent() {
 
         <button
           onClick={handleLogout}
-          className="self-start sm:self-auto px-3 py-1.5 text-xs text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+          className="self-start sm:self-auto px-3 py-1.5 text-xs text-amber-500 dark:text-red-400 border border-red-200 dark:border-red-900/30 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
         >
           Sair da Sessão
         </button>
