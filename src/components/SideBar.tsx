@@ -21,15 +21,8 @@ export function SideBar() {
                     href="#" 
                     className="text-zinc-100 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-500 flex gap-3"
                 >
-                    <FileClock className="w-5 h-5 shrink-0 text-zinc-400" />
-                    <span>Envio de tarefa</span>
-                </a>
-                <a 
-                    href="#" 
-                    className="text-zinc-100 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-500 flex gap-3"
-                >
                     <MessageSquareWarning className="w-5 h-5 shrink-0 text-zinc-400" />
-                    <span>Envio de tarefa</span>
+                    <span>Orientações</span>
                 </a>
             </nav>
         </aside>
@@ -51,17 +44,6 @@ export function SideBarCelular({ setIsOpen }: SideBarCelularProps) {
                     <Forward className="w-5 h-5 shrink-0 text-zinc-400" />
                     <span>Envio de tarefa</span>
                 </a>
-
-                <a
-                    href="#"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-amber-500 text-zinc-950 font-semibold"
-
-                >
-                    <FileClock className="w-5 h-5 shrink-0 text-zinc-400" />
-                    <span>Histórico de envios</span>
-                </a>
-
                 <a
                     href="#"
                     onClick={() => setIsOpen(false)}
@@ -69,7 +51,7 @@ export function SideBarCelular({ setIsOpen }: SideBarCelularProps) {
 
                     >
                     <MessageSquareWarning className="w-5 h-5 shrink-0 text-zinc-400" />
-                    <span>Avisos</span>
+                    <span>Orientações</span>
                     </a>
             </nav>
         </aside>
