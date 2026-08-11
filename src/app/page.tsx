@@ -4,7 +4,7 @@ export default function Home() {
   return (
     <main className="min-h-[85vh] flex flex-col items-center justify-center px-4 py-12">
       <div className="text-center max-w-xl mx-auto space-y-4 mb-10">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-zinc-100 dark:text-white tracking-tight">
           Plutão Física
         </h1>
         <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
