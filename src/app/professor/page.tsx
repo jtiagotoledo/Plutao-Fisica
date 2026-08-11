@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import GerenciadorTarefas from '@/components/GerenciadorTarefas';
 import GerenciadorEstudantes from '@/components/GerenciadorEstudantes';
+import MatrizEntregas from '@/components/MatrizEntregas';
 
 function PainelProfessorContent() {
   const searchParams = useSearchParams();
@@ -11,9 +12,10 @@ function PainelProfessorContent() {
   const [autenticado, setAutenticado] = useState<boolean>(false);
   const [inputKey, setInputKey] = useState<string>('');
 
-  // Referências para rolagem suave
+  // Referências para rolagem suave de cada seção
   const formTarefaRef = useRef<HTMLDivElement>(null);
   const formEstudanteRef = useRef<HTMLDivElement>(null);
+  const formEntregasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const urlKey = searchParams.get('key');
@@ -44,7 +46,7 @@ function PainelProfessorContent() {
     setAutenticado(false);
   };
 
-  // Funções de Scroll
+  // Funções para Rolar e Focar no Input de Cada Módulo
   const handleScrollToTarefas = () => {
     formTarefaRef.current?.scrollIntoView({ behavior: 'smooth' });
     const input = formTarefaRef.current?.querySelector('input');
@@ -57,6 +59,13 @@ function PainelProfessorContent() {
     input?.focus();
   };
 
+  const handleScrollToEntregas = () => {
+    formEntregasRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const input = formEntregasRef.current?.querySelector('input');
+    input?.focus();
+  };
+
+  // --- Tela de Autenticação ---
   if (!autenticado) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center px-4">
@@ -83,7 +92,7 @@ function PainelProfessorContent() {
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-white font-medium text-sm rounded-lg transition-colors"
+              className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-white font-medium text-sm rounded-lg transition-colors cursor-pointer"
             >
               Autenticar
             </button>
@@ -93,11 +102,13 @@ function PainelProfessorContent() {
     );
   }
 
+  // --- Painel Principal do Professor ---
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-zinc-200 dark:border-zinc-800">
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      {/* Cabeçalho */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-100 dark:text-white">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
             Painel de Gestão - Plutão Física
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -107,15 +118,16 @@ function PainelProfessorContent() {
 
         <button
           onClick={handleLogout}
-          className="self-start sm:self-auto px-3 py-1.5 text-xs text-amber-500 dark:text-red-400 border border-zinc-200 dark:border-red-900/30 rounded-md hover:bg-zinc-100 dark:hover:bg-red-950/20 transition-colors"
+          className="self-start sm:self-auto px-3 py-1.5 text-xs text-amber-500 dark:text-red-400 border border-zinc-200 dark:border-red-900/30 rounded-md hover:bg-zinc-100 dark:hover:bg-red-950/20 transition-colors cursor-pointer"
         >
           Sair da Sessão
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Card 1 */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+      {/* Grid de Cards Superiores */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Card 1: Tarefas */}
+        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
           <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">Cadastrar Tarefa</h3>
           <p className="text-xs text-zinc-500 mb-4">Envie um PDF para uma ou várias turmas (1A, 1B, etc).</p>
           <button
@@ -126,8 +138,8 @@ function PainelProfessorContent() {
           </button>
         </div>
 
-        {/* Card 2 */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+        {/* Card 2: Estudantes */}
+        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
           <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">Cadastrar Estudantes</h3>
           <p className="text-xs text-zinc-500 mb-4">Gere o hash de 4 caracteres para novos alunos individualmente ou em lote.</p>
           <button
@@ -138,24 +150,32 @@ function PainelProfessorContent() {
           </button>
         </div>
 
-        {/* Card 3 */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+        {/* Card 3: Entregas */}
+        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
           <h3 className="font-semibold text-zinc-900 dark:text-white mb-2">Matriz de Entregas</h3>
           <p className="text-xs text-zinc-500 mb-4">Acompanhe o status e as fotos enviadas pelos alunos por turma.</p>
-          <button className="w-full py-2 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-lg transition-colors cursor-pointer">
+          <button
+            onClick={handleScrollToEntregas}
+            className="w-full py-2 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-lg transition-colors cursor-pointer"
+          >
             Ver Entregas
           </button>
         </div>
       </div>
 
-      {/* Módulo de Tarefas */}
+      {/* Módulo 1: Gerenciador de Tarefas */}
       <div ref={formTarefaRef}>
         <GerenciadorTarefas />
       </div>
 
-      {/* Módulo de Estudantes */}
+      {/* Módulo 2: Gerenciador de Estudantes */}
       <div ref={formEstudanteRef}>
         <GerenciadorEstudantes />
+      </div>
+
+      {/* Módulo 3: Matriz de Entregas */}
+      <div ref={formEntregasRef}>
+        <MatrizEntregas />
       </div>
     </div>
   );
@@ -163,7 +183,7 @@ function PainelProfessorContent() {
 
 export default function PainelProfessor() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-sm">Carregando painel...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-sm text-zinc-500">Carregando painel...</div>}>
       <PainelProfessorContent />
     </Suspense>
   );

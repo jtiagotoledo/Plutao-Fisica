@@ -66,7 +66,7 @@ export default function GerenciadorEstudantes() {
     carregarEstudantes(filtroClasse);
   }, [filtroClasse]);
 
-  // Prepara o formulário individual para edição
+  // Prepara o formulário para edição
   const handleEditClick = (estudante: Estudante) => {
     setEditingId(estudante._id || null);
     setNome(estudante.nome);
@@ -105,7 +105,44 @@ export default function GerenciadorEstudantes() {
     }
   };
 
-  // Submit Cadastro Individual ou Edição (PUT)
+  // Leitura de arquivo CSV/TXT para a caixa de texto
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const conteudo = event.target?.result as string;
+      if (conteudo) {
+        setTextoCopiado(conteudo);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  // Exportar dados exibidos na tabela para CSV (compatível com Excel)
+  const handleExportarCSV = () => {
+    if (estudantes.length === 0) return;
+
+    const cabecalho = 'Numero;Nome;Classe;Hash\n';
+    const linhas = estudantes
+      .map((est) => `${est.numero};"${est.nome}";${est.classe};${est.hash || ''}`)
+      .join('\n');
+
+    const blob = new Blob(['\uFEFF' + cabecalho + linhas], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `hashes_turma_${filtroClasse.toUpperCase() || 'alunos'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Submit Cadastro Individual ou Edição
   const handleIndividualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -113,7 +150,6 @@ export default function GerenciadorEstudantes() {
 
     try {
       if (editingId) {
-        // --- EDIÇÃO (PUT) ---
         const res = await fetchWithAdmin(`/professor/estudantes/${editingId}`, {
           method: 'PUT',
           body: JSON.stringify({
@@ -134,7 +170,6 @@ export default function GerenciadorEstudantes() {
           setMensagem({ tipo: 'erro', texto: err.message || 'Erro ao atualizar estudante.' });
         }
       } else {
-        // --- CRIAÇÃO (POST) ---
         const payload: Estudante[] = [
           {
             nome: nome.trim(),
@@ -183,9 +218,15 @@ export default function GerenciadorEstudantes() {
       const estudantesParaEnviar: Estudante[] = [];
 
       linhas.forEach((linha, index) => {
-        const colunas = linha.includes('\t')
-          ? linha.split('\t').map((c) => c.trim())
-          : linha.split(',').map((c) => c.trim());
+        let colunas: string[] = [];
+
+        if (linha.includes('\t')) {
+          colunas = linha.split('\t').map((c) => c.trim().replace(/^"|"$/g, ''));
+        } else if (linha.includes(';')) {
+          colunas = linha.split(';').map((c) => c.trim().replace(/^"|"$/g, ''));
+        } else {
+          colunas = linha.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+        }
 
         if (colunas.length >= 2) {
           if (!isNaN(Number(colunas[0]))) {
@@ -211,7 +252,7 @@ export default function GerenciadorEstudantes() {
       });
 
       if (estudantesParaEnviar.length === 0) {
-        throw new Error('Nenhum estudante válido foi reconhecido no texto informado.');
+        throw new Error('Nenhum estudante válido foi reconhecido no texto/arquivo informado.');
       }
 
       const res = await fetchWithAdmin('/professor/estudantes', {
@@ -268,7 +309,7 @@ export default function GerenciadorEstudantes() {
             <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
               <button
                 onClick={() => setAbaAtiva('individual')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
                   abaAtiva === 'individual'
                     ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
@@ -278,7 +319,7 @@ export default function GerenciadorEstudantes() {
               </button>
               <button
                 onClick={() => setAbaAtiva('lote')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
                   abaAtiva === 'lote'
                     ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
@@ -362,29 +403,43 @@ export default function GerenciadorEstudantes() {
         {/* Aba 2: Importação em Lote */}
         {abaAtiva === 'lote' && !editingId && (
           <form onSubmit={handleLoteSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Classe / Turma para este lote
-              </label>
-              <input
-                type="text"
-                value={classeLote}
-                onChange={(e) => setClasseLote(e.target.value)}
-                placeholder="Ex: 1A"
-                className="w-full max-w-xs px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Classe / Turma para este lote
+                </label>
+                <input
+                  type="text"
+                  value={classeLote}
+                  onChange={(e) => setClasseLote(e.target.value)}
+                  placeholder="Ex: 1A"
+                  className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Carregar de arquivo CSV / TXT (Opcional)
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleFileUpload}
+                  className="w-full px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-amber-50 file:text-amber-700 dark:file:bg-zinc-700 dark:file:text-zinc-200 cursor-pointer"
+                />
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Copie do Excel e cole abaixo (uma linha por aluno)
+                Prévia do Conteúdo (Você também pode colar direto da sua planilha)
               </label>
               <textarea
                 rows={6}
                 value={textoCopiado}
                 onChange={(e) => setTextoCopiado(e.target.value)}
-                placeholder={`Formato Aceito:\n6\tHelena Ramos\n7\tIgor Santos\n\nou cole diretamente a lista do Excel.`}
+                placeholder={`Formatos Aceitos:\n6;Helena Ramos\n7;Igor Santos\n\nou simplesmente cole as colunas de Número e Nome direto do Excel.`}
                 className="w-full px-3 py-2 text-sm font-mono bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
                 required
               />
@@ -406,15 +461,31 @@ export default function GerenciadorEstudantes() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Estudantes Cadastrados</h2>
 
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Filtrar Turma:</label>
-            <input
-              type="text"
-              value={filtroClasse}
-              onChange={(e) => setFiltroClasse(e.target.value)}
-              placeholder="Ex: 1A"
-              className="px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
-            />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Filtrar Turma:</label>
+              <input
+                type="text"
+                value={filtroClasse}
+                onChange={(e) => setFiltroClasse(e.target.value)}
+                placeholder="Ex: 1A"
+                className="px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
+              />
+            </div>
+
+            {/* Botão de Exportar CSV para Excel */}
+            {estudantes.length > 0 && (
+              <button
+                onClick={handleExportarCSV}
+                title="Baixar planilha CSV pronta para o Excel"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Baixar CSV (Excel)
+              </button>
+            )}
           </div>
         </div>
 
