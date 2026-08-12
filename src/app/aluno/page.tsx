@@ -218,7 +218,7 @@ function PainelAlunoContent() {
             Plutão Física — Área do Aluno
           </h1>
           <p className="text-xs text-center text-zinc-500 dark:text-zinc-400 mb-6">
-            Insira o seu código de acesso (Hash de 4 caracteres)
+            Insira o seu código de acesso:
           </p>
 
           {mensagem && (
@@ -310,7 +310,7 @@ function PainelAlunoContent() {
       {/* Cabeçalho do Aluno */}
       <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Olá, {estudante?.nome}</h1>
+          <h1 className="text-xl font-bold text-zinc-100 dark:text-white">Olá, {estudante?.nome}</h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Turma: <span className="font-semibold text-amber-500">{estudante?.classe}</span> | Nº: {estudante?.numero}
           </p>
@@ -338,7 +338,7 @@ function PainelAlunoContent() {
 
       {/* Lista de Tarefas */}
       <div className="space-y-4">
-        <h2 className="text-base font-bold text-zinc-900 dark:text-white">Suas Tarefas</h2>
+        <h2 className="text-base font-bold text-zinc-100 dark:text-white">Suas Tarefas</h2>
 
         {tarefas.length === 0 ? (
           <p className="text-xs text-zinc-500 text-center py-8">Nenhuma tarefa cadastrada para a sua turma.</p>
