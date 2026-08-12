@@ -22,7 +22,7 @@ export default function Navbar() {
                     <span className="text-xl font-bold text-amber-500">Plutão Física</span>
                 </div>
 
-                <span className="text-sm text-zinc-400">Topo do Site</span>
+                <span className="text-sm text-zinc-400"></span>
             </header>
 
             {isOpen && (
