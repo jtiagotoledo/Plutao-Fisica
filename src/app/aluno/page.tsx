@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import imageCompression from 'browser-image-compression';
 import { BASE_URL, fetchWithStudent } from '@/lib/api';
 
 interface Tarefa {
@@ -28,24 +29,25 @@ function PainelAlunoContent() {
   const [autenticado, setAutenticado] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [compressing, setCompressing] = useState<boolean>(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
   const [estudante, setEstudante] = useState<EstudanteInfo | null>(null);
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
 
-  // Modal para visualizar entrega já enviada
+  // Modal para visualizar a entrega realizada
   const [modalVisualizacao, setModalVisualizacao] = useState<{
     titulo: string;
     conteudo: string[] | string;
     dataEntrega?: string | null;
   } | null>(null);
 
-  // Estados para gerenciar o upload de até 2 fotos por tarefa
+  // Estados para envio da resolução (máx 2 fotos)
   const [tarefaAtivaId, setTarefaAtivaId] = useState<string | null>(null);
   const [fotos, setFotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
 
-  // Carrega hash da URL ou LocalStorage
+  // Leitura inicial do Hash da URL ou do LocalStorage
   useEffect(() => {
     const urlHash = searchParams.get('hash');
     const localHash = localStorage.getItem('x-student-hash');
@@ -57,7 +59,7 @@ function PainelAlunoContent() {
     }
   }, [searchParams]);
 
-  // Busca dados do aluno e tarefas
+  // Autenticação e busca do painel
   const autenticarEObterPainel = async (codigoHash: string) => {
     try {
       setLoading(true);
@@ -103,25 +105,51 @@ function PainelAlunoContent() {
     setTarefas([]);
   };
 
-  // Seleção de fotos com trava de no máximo 2 fotos e 100KB por foto
-  const handleSelectFotos = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  // Compressão automática das fotos para < 100 KB
+  const handleSelectFotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = Array.from(e.target.files || []);
 
-    if (files.length + fotos.length > 2) {
-      alert('Você pode enviar no máximo 2 fotos por entrega.');
-      return;
+  if (files.length + fotos.length > 2) {
+    alert('Você pode enviar no máximo 2 fotos por entrega.');
+    return;
+  }
+
+  const options = {
+    maxSizeMB: 0.09, // ~90 KB para garantir margem de segurança
+    maxWidthOrHeight: 1280, // Mantém legibilidade dos exercícios
+    useWebWorker: true,
+  };
+
+  try {
+    setCompressing(true);
+    const fotosProcessadas: File[] = [];
+
+    for (const file of files) {
+      if (file.size <= 100 * 1024) {
+        fotosProcessadas.push(file);
+      } else {
+        const compressedFile = await imageCompression(file, options);
+        
+        // Garante que o arquivo comprimido preserva o nome original com extensão .jpg
+        const nomeFormatado = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+        const fileComExtensao = new File([compressedFile], nomeFormatado, {
+          type: 'image/jpeg',
+        });
+
+        fotosProcessadas.push(fileComExtensao);
+      }
     }
 
-    const fotoGrande = files.find((f) => f.size > 100 * 1024);
-    if (fotoGrande) {
-      alert(`A imagem "${fotoGrande.name}" excede o limite máximo de 100 KB.`);
-      return;
-    }
-
-    const novasFotos = [...fotos, ...files].slice(0, 2);
+    const novasFotos = [...fotos, ...fotosProcessadas].slice(0, 2);
     setFotos(novasFotos);
     setPreviews(novasFotos.map((file) => URL.createObjectURL(file)));
-  };
+  } catch (error) {
+    console.error('Erro ao comprimir imagem:', error);
+    alert('Não foi possível processar essa imagem. Tente outra foto.');
+  } finally {
+    setCompressing(false);
+  }
+};
 
   const handleRemoveFoto = (index: number) => {
     const novasFotos = fotos.filter((_, i) => i !== index);
@@ -129,7 +157,7 @@ function PainelAlunoContent() {
     setPreviews(novasFotos.map((file) => URL.createObjectURL(file)));
   };
 
-  // Envio direto multipart/form-data da entrega com até 2 fotos
+  // Envio direto das fotos comprimidas via FormData
   const handleEnviarEntrega = async (tarefaId: string) => {
     if (fotos.length === 0) {
       alert('Selecione ao menos 1 foto da sua resolução.');
@@ -145,8 +173,16 @@ function PainelAlunoContent() {
       formData.append('tarefaId', tarefaId);
       fotos.forEach((foto) => formData.append('fotos', foto));
 
-      const res = await fetch(`${BASE_URL}/estudante/entregas`, {
+      const formattedBaseUrl = BASE_URL.replace(/\/$/, '');
+      const uploadUrl = formattedBaseUrl.endsWith('/api')
+        ? `${formattedBaseUrl}/estudante/entregas`
+        : `${formattedBaseUrl}/api/estudante/entregas`;
+
+      const res = await fetch(uploadUrl, {
         method: 'POST',
+        headers: {
+          'x-student-hash': hash,
+        },
         body: formData,
       });
 
@@ -167,7 +203,13 @@ function PainelAlunoContent() {
     }
   };
 
-  // --- Tela de Entrada (Hash) ---
+  const extrairFotosArray = (conteudo?: string[] | string | null): string[] => {
+    if (!conteudo) return [];
+    if (Array.isArray(conteudo)) return conteudo;
+    return [conteudo];
+  };
+
+  // --- Tela de Entrada (Código/Hash) ---
   if (!autenticado) {
     return (
       <div className="min-h-[75vh] flex items-center justify-center px-4">
@@ -211,16 +253,10 @@ function PainelAlunoContent() {
     );
   }
 
-  // Normaliza o conteúdo da entrega para array de strings
-  const extrairFotosArray = (conteudo?: string[] | string | null): string[] => {
-    if (!conteudo) return [];
-    if (Array.isArray(conteudo)) return conteudo;
-    return [conteudo];
-  };
-
+  // --- Painel Principal ---
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      {/* Modal para Visualização da Entrega Realizada */}
+      {/* Modal para Visualização do Envio Realizado */}
       {modalVisualizacao && (
         <div
           onClick={() => setModalVisualizacao(null)}
@@ -250,7 +286,7 @@ function PainelAlunoContent() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs text-zinc-500">Resolução enviada:</p>
+              <p className="text-xs text-zinc-500 font-medium">Resolução enviada:</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto p-1">
                 {extrairFotosArray(modalVisualizacao.conteudo).map((url, idx) => (
                   <div
@@ -274,7 +310,7 @@ function PainelAlunoContent() {
       {/* Cabeçalho do Aluno */}
       <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-          <h1 className="text-xl font-bold text-zinc-100 dark:text-white">Olá, {estudante?.nome}</h1>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Olá, {estudante?.nome}</h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Turma: <span className="font-semibold text-amber-500">{estudante?.classe}</span> | Nº: {estudante?.numero}
           </p>
@@ -302,7 +338,7 @@ function PainelAlunoContent() {
 
       {/* Lista de Tarefas */}
       <div className="space-y-4">
-        <h2 className="text-base font-bold text-zinc-100 dark:text-white">Suas Tarefas</h2>
+        <h2 className="text-base font-bold text-zinc-900 dark:text-white">Suas Tarefas</h2>
 
         {tarefas.length === 0 ? (
           <p className="text-xs text-zinc-500 text-center py-8">Nenhuma tarefa cadastrada para a sua turma.</p>
@@ -327,7 +363,7 @@ function PainelAlunoContent() {
                   )}
                 </div>
 
-                {/* Badge de Status Interativo ao Clicar (Visualiza Entrega) */}
+                {/* Badge Interativa ao Clicar (Abre Modal da Entrega) */}
                 {tarefa.entregue && tarefa.conteudo ? (
                   <button
                     onClick={() =>
@@ -349,11 +385,11 @@ function PainelAlunoContent() {
                 )}
               </div>
 
-              {/* Formulário de Envio de Fotos (Abre ao clicar) */}
+              {/* Formulário de Envio de Fotos */}
               {tarefaAtivaId === tarefa.tarefaId ? (
                 <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
                   <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Anexe até 2 fotos da sua resolução (Máx: 100 KB por foto):
+                    Anexe até 2 fotos da sua resolução (otimização automática):
                   </p>
 
                   {fotos.length < 2 && (
@@ -362,8 +398,15 @@ function PainelAlunoContent() {
                       accept="image/*"
                       multiple
                       onChange={handleSelectFotos}
-                      className="w-full text-xs text-zinc-600 dark:text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-amber-50 file:text-amber-700 dark:file:bg-zinc-800 dark:file:text-zinc-200 cursor-pointer"
+                      disabled={compressing}
+                      className="w-full text-xs text-zinc-600 dark:text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-amber-50 file:text-amber-700 dark:file:bg-zinc-800 dark:file:text-zinc-200 cursor-pointer disabled:opacity-50"
                     />
+                  )}
+
+                  {compressing && (
+                    <p className="text-xs text-amber-500 font-medium animate-pulse">
+                      Otimizando foto(s)... aguarde.
+                    </p>
                   )}
 
                   {/* Previews das fotos selecionadas */}
@@ -391,7 +434,7 @@ function PainelAlunoContent() {
                   <div className="flex gap-2 pt-2">
                     <button
                       onClick={() => handleEnviarEntrega(tarefa.tarefaId)}
-                      disabled={submitting || fotos.length === 0}
+                      disabled={submitting || compressing || fotos.length === 0}
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                     >
                       {submitting ? 'Enviando...' : `Confirmar Envio (${fotos.length}/2)`}
