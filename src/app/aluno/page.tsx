@@ -29,25 +29,26 @@ function PainelAlunoContent() {
   const [autenticado, setAutenticado] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
   const [compressing, setCompressing] = useState<boolean>(false);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
   const [estudante, setEstudante] = useState<EstudanteInfo | null>(null);
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
 
-  // Modal para visualizar a entrega realizada
+  // Modal para visualizar e excluir a entrega
   const [modalVisualizacao, setModalVisualizacao] = useState<{
+    tarefaId: string;
     titulo: string;
     conteudo: string[] | string;
     dataEntrega?: string | null;
   } | null>(null);
 
-  // Estados para envio da resolução (máx 2 fotos)
+  // Estados para envio da resolução
   const [tarefaAtivaId, setTarefaAtivaId] = useState<string | null>(null);
   const [fotos, setFotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
 
-  // Leitura inicial do Hash da URL ou do LocalStorage
   useEffect(() => {
     const urlHash = searchParams.get('hash');
     const localHash = localStorage.getItem('x-student-hash');
@@ -59,7 +60,6 @@ function PainelAlunoContent() {
     }
   }, [searchParams]);
 
-  // Autenticação e busca do painel
   const autenticarEObterPainel = async (codigoHash: string) => {
     try {
       setLoading(true);
@@ -105,51 +105,47 @@ function PainelAlunoContent() {
     setTarefas([]);
   };
 
-  // Compressão automática das fotos para < 100 KB
   const handleSelectFotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []);
 
-  if (files.length + fotos.length > 2) {
-    alert('Você pode enviar no máximo 2 fotos por entrega.');
-    return;
-  }
-
-  const options = {
-    maxSizeMB: 0.09, // ~90 KB para garantir margem de segurança
-    maxWidthOrHeight: 1280, // Mantém legibilidade dos exercícios
-    useWebWorker: true,
-  };
-
-  try {
-    setCompressing(true);
-    const fotosProcessadas: File[] = [];
-
-    for (const file of files) {
-      if (file.size <= 100 * 1024) {
-        fotosProcessadas.push(file);
-      } else {
-        const compressedFile = await imageCompression(file, options);
-        
-        // Garante que o arquivo comprimido preserva o nome original com extensão .jpg
-        const nomeFormatado = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
-        const fileComExtensao = new File([compressedFile], nomeFormatado, {
-          type: 'image/jpeg',
-        });
-
-        fotosProcessadas.push(fileComExtensao);
-      }
+    if (files.length + fotos.length > 2) {
+      alert('Você pode enviar no máximo 2 fotos por entrega.');
+      return;
     }
 
-    const novasFotos = [...fotos, ...fotosProcessadas].slice(0, 2);
-    setFotos(novasFotos);
-    setPreviews(novasFotos.map((file) => URL.createObjectURL(file)));
-  } catch (error) {
-    console.error('Erro ao comprimir imagem:', error);
-    alert('Não foi possível processar essa imagem. Tente outra foto.');
-  } finally {
-    setCompressing(false);
-  }
-};
+    const options = {
+      maxSizeMB: 0.09,
+      maxWidthOrHeight: 1280,
+      useWebWorker: true,
+    };
+
+    try {
+      setCompressing(true);
+      const fotosProcessadas: File[] = [];
+
+      for (const file of files) {
+        if (file.size <= 100 * 1024) {
+          fotosProcessadas.push(file);
+        } else {
+          const compressedFile = await imageCompression(file, options);
+          const nomeFormatado = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
+          const fileComExtensao = new File([compressedFile], nomeFormatado, {
+            type: 'image/jpeg',
+          });
+          fotosProcessadas.push(fileComExtensao);
+        }
+      }
+
+      const novasFotos = [...fotos, ...fotosProcessadas].slice(0, 2);
+      setFotos(novasFotos);
+      setPreviews(novasFotos.map((file) => URL.createObjectURL(file)));
+    } catch (error) {
+      console.error('Erro ao comprimir imagem:', error);
+      alert('Não foi possível processar essa imagem. Tente outra foto.');
+    } finally {
+      setCompressing(false);
+    }
+  };
 
   const handleRemoveFoto = (index: number) => {
     const novasFotos = fotos.filter((_, i) => i !== index);
@@ -157,7 +153,6 @@ function PainelAlunoContent() {
     setPreviews(novasFotos.map((file) => URL.createObjectURL(file)));
   };
 
-  // Envio direto das fotos comprimidas via FormData
   const handleEnviarEntrega = async (tarefaId: string) => {
     if (fotos.length === 0) {
       alert('Selecione ao menos 1 foto da sua resolução.');
@@ -203,13 +198,44 @@ function PainelAlunoContent() {
     }
   };
 
+  // Função para EXCLUIR a entrega
+  const handleExcluirEntrega = async (tarefaId: string) => {
+    if (!confirm('Tem certeza de que deseja apagar essa resolução enviada?')) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+
+      const res = await fetchWithStudent('/estudante/entregar', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ hash, tarefaId }),
+      });
+
+      if (res.ok) {
+        setMensagem({ tipo: 'sucesso', texto: 'Resolução removida com sucesso!' });
+        setModalVisualizacao(null);
+        autenticarEObterPainel(hash);
+      } else {
+        const err = await res.json();
+        alert(err.erro || 'Erro ao excluir resolução.');
+      }
+    } catch {
+      alert('Falha de conexão ao excluir a resolução.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const extrairFotosArray = (conteudo?: string[] | string | null): string[] => {
     if (!conteudo) return [];
     if (Array.isArray(conteudo)) return conteudo;
     return [conteudo];
   };
 
-  // --- Tela de Entrada (Código/Hash) ---
   if (!autenticado) {
     return (
       <div className="min-h-[75vh] flex items-center justify-center px-4">
@@ -218,7 +244,7 @@ function PainelAlunoContent() {
             Plutão Física — Área do Aluno
           </h1>
           <p className="text-xs text-center text-zinc-500 dark:text-zinc-400 mb-6">
-            Insira o seu código de acesso:
+            Insira o seu código de acesso (Hash de 4 caracteres)
           </p>
 
           {mensagem && (
@@ -253,10 +279,9 @@ function PainelAlunoContent() {
     );
   }
 
-  // --- Painel Principal ---
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      {/* Modal para Visualização do Envio Realizado */}
+      {/* Modal para Visualização e Exclusão com Botão Lixeira */}
       {modalVisualizacao && (
         <div
           onClick={() => setModalVisualizacao(null)}
@@ -266,7 +291,7 @@ function PainelAlunoContent() {
             onClick={(e) => e.stopPropagation()}
             className="relative max-w-2xl w-full bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl space-y-4"
           >
-            <div className="flex justify-between items-center pb-2 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex justify-between items-center pb-3 border-b border-zinc-200 dark:border-zinc-800">
               <div>
                 <h3 className="font-bold text-zinc-900 dark:text-white text-base">
                   {modalVisualizacao.titulo}
@@ -277,12 +302,33 @@ function PainelAlunoContent() {
                   </p>
                 )}
               </div>
-              <button
-                onClick={() => setModalVisualizacao(null)}
-                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-white p-1 rounded-lg cursor-pointer text-lg font-bold"
-              >
-                ✕
-              </button>
+
+              {/* Botão de Excluir (Lixeira) + Botão Fechar */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleExcluirEntrega(modalVisualizacao.tarefaId)}
+                  disabled={deleting}
+                  title="Apagar esta resolução"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/60 dark:hover:bg-red-900/80 dark:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  {deleting ? 'Apagando...' : 'Excluir Entrega'}
+                </button>
+
+                <button
+                  onClick={() => setModalVisualizacao(null)}
+                  className="text-zinc-500 hover:text-zinc-800 dark:hover:text-white p-1 rounded-lg cursor-pointer text-lg font-bold"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -310,7 +356,7 @@ function PainelAlunoContent() {
       {/* Cabeçalho do Aluno */}
       <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-          <h1 className="text-xl font-bold text-zinc-100 dark:text-white">Olá, {estudante?.nome}</h1>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Olá, {estudante?.nome}</h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Turma: <span className="font-semibold text-amber-500">{estudante?.classe}</span> | Nº: {estudante?.numero}
           </p>
@@ -338,7 +384,7 @@ function PainelAlunoContent() {
 
       {/* Lista de Tarefas */}
       <div className="space-y-4">
-        <h2 className="text-base font-bold text-zinc-100 dark:text-white">Suas Tarefas</h2>
+        <h2 className="text-base font-bold text-zinc-900 dark:text-white">Suas Tarefas</h2>
 
         {tarefas.length === 0 ? (
           <p className="text-xs text-zinc-500 text-center py-8">Nenhuma tarefa cadastrada para a sua turma.</p>
@@ -363,11 +409,11 @@ function PainelAlunoContent() {
                   )}
                 </div>
 
-                {/* Badge Interativa ao Clicar (Abre Modal da Entrega) */}
                 {tarefa.entregue && tarefa.conteudo ? (
                   <button
                     onClick={() =>
                       setModalVisualizacao({
+                        tarefaId: tarefa.tarefaId,
                         titulo: tarefa.titulo,
                         conteudo: tarefa.conteudo!,
                         dataEntrega: tarefa.dataEntrega,
@@ -385,7 +431,6 @@ function PainelAlunoContent() {
                 )}
               </div>
 
-              {/* Formulário de Envio de Fotos */}
               {tarefaAtivaId === tarefa.tarefaId ? (
                 <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
                   <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
@@ -409,7 +454,6 @@ function PainelAlunoContent() {
                     </p>
                   )}
 
-                  {/* Previews das fotos selecionadas */}
                   {previews.length > 0 && (
                     <div className="grid grid-cols-2 gap-3">
                       {previews.map((src, index) => (

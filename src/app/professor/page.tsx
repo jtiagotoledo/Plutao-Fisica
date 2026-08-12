@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import GerenciadorTarefas from '@/components/GerenciadorTarefas';
 import GerenciadorEstudantes from '@/components/GerenciadorEstudantes';
-import MatrizEntregas from '@/components/MatrizEntregas';
+import {MatrizEntregas} from '@/components/MatrizEntregas';
 
 type SecaoAtiva = 'tarefas' | 'estudantes' | 'entregas' | null;
 
