@@ -198,7 +198,7 @@ function PainelAlunoContent() {
     }
   };
 
-  // Função para EXCLUIR a entrega
+  // EXCLUSÃO DA ENTREGA
   const handleExcluirEntrega = async (tarefaId: string) => {
     if (!confirm('Tem certeza de que deseja apagar essa resolução enviada?')) {
       return;
@@ -281,7 +281,7 @@ function PainelAlunoContent() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      {/* Modal para Visualização e Exclusão com Botão Lixeira */}
+      {/* MODAL COM BOTAO DE LIXEIRA E EXCLUSÃO */}
       {modalVisualizacao && (
         <div
           onClick={() => setModalVisualizacao(null)}
@@ -303,7 +303,7 @@ function PainelAlunoContent() {
                 )}
               </div>
 
-              {/* Botão de Excluir (Lixeira) + Botão Fechar */}
+              {/* BOTAO EXCLUIR ENTREGA COM ICONE DA LIXEIRA */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handleExcluirEntrega(modalVisualizacao.tarefaId)}
@@ -356,7 +356,7 @@ function PainelAlunoContent() {
       {/* Cabeçalho do Aluno */}
       <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Olá, {estudante?.nome}</h1>
+          <h1 className="text-xl font-bold text-zinc-100 dark:text-white">Olá, {estudante?.nome}</h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Turma: <span className="font-semibold text-amber-500">{estudante?.classe}</span> | Nº: {estudante?.numero}
           </p>
@@ -384,7 +384,7 @@ function PainelAlunoContent() {
 
       {/* Lista de Tarefas */}
       <div className="space-y-4">
-        <h2 className="text-base font-bold text-zinc-900 dark:text-white">Suas Tarefas</h2>
+        <h2 className="text-base font-bold text-zinc-100 dark:text-white">Suas Tarefas</h2>
 
         {tarefas.length === 0 ? (
           <p className="text-xs text-zinc-500 text-center py-8">Nenhuma tarefa cadastrada para a sua turma.</p>
