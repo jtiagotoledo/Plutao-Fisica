@@ -114,8 +114,8 @@ function PainelAlunoContent() {
     }
 
     const options = {
-      maxSizeMB: 0.09,
-      maxWidthOrHeight: 1280,
+      maxSizeMB: 0.18, // Ajustado de 0.09 para 0.18 (~180 KB)
+      maxWidthOrHeight: 1400,
       useWebWorker: true,
     };
 
@@ -124,7 +124,8 @@ function PainelAlunoContent() {
       const fotosProcessadas: File[] = [];
 
       for (const file of files) {
-        if (file.size <= 100 * 1024) {
+        // Ajustado de 100 * 1024 para 200 * 1024 (200 KB)
+        if (file.size <= 200 * 1024) {
           fotosProcessadas.push(file);
         } else {
           const compressedFile = await imageCompression(file, options);
